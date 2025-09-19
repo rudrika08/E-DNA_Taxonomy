@@ -17,23 +17,46 @@ export const TaxonomyTree = ({ taxonomyData, loading, error, onRefresh }) => {
 
   useEffect(() => {
     if (taxonomyData?.taxonomy) {
-      setFilteredData(taxonomyData.taxonomy);
+      // Transform the taxonomy data into tree structure
+      const transformedData = taxonomyData.taxonomy.map((item, index) => {
+        const ranks = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
+        const nodes = [];
+        
+        ranks.forEach((rank, rankIndex) => {
+          if (item[rank]) {
+            nodes.push({
+              node_id: `${index}-${rank}`,
+              parent_id: rankIndex > 0 ? `${index}-${ranks[rankIndex - 1]}` : null,
+              name: item[rank].replace(/_/g, ' '),
+              rank: rank,
+              attributes: {
+                added_at: item.added_at
+              }
+            });
+          }
+        });
+        
+        return nodes;
+      }).flat();
+
+      setFilteredData(transformedData);
     }
   }, [taxonomyData]);
 
   useEffect(() => {
-    if (!taxonomyData?.taxonomy) return;
+    if (!filteredData) return;
 
     if (searchTerm.trim() === '') {
-      setFilteredData(taxonomyData.taxonomy);
+      setFilteredData(filteredData);
     } else {
-      const filtered = taxonomyData.taxonomy.filter(node =>
-        node.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        node.rank?.toLowerCase().includes(searchTerm.toLowerCase())
+      const searchLower = searchTerm.toLowerCase();
+      const filtered = filteredData.filter(node =>
+        node.name?.toLowerCase().includes(searchLower) ||
+        node.rank?.toLowerCase().includes(searchLower)
       );
       setFilteredData(filtered);
     }
-  }, [searchTerm, taxonomyData]);
+  }, [searchTerm]);
 
   const toggleNode = (nodeId) => {
     const newExpanded = new Set(expandedNodes);
